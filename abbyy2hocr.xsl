@@ -25,6 +25,7 @@ Source: http://iphylo.blogspot.com/2011/07/correcting-ocr-using-hocr-firefox.htm
 </xsl:template>
 
 <xsl:template match="//page">
+  <xsl:message>Doing page</xsl:message>
   <div class="ocr_page">
 		<xsl:attribute name="title">
 			<xsl:text>bbox 0 0 </xsl:text>
