@@ -3,10 +3,10 @@ import requests
 from xml.etree import cElementTree
 import zlib
 
-PAGELIMIT=40
-SIZE=6*1024*1024
-XMLTEMPLATE = 'oed-vol1_p%d.xml'
-HTMLTEMPLATE = 'oed-vol1_p%d.html'
+PAGELIMIT=30
+SIZE=5*1024*1024
+XMLTEMPLATE = 'output/oed-vol1_p%d.xml'
+HTMLTEMPLATE = 'output/oed-vol1_p%d.html'
 HEADER = ['<?xml version="1.0" encoding="UTF-8"?>',
 #    '<document version="1.0" producer="LuraDocument XML Exporter for ABBYY FineReader" pagesCount="1"',
 #    'xmlns="http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml">',
@@ -41,12 +41,21 @@ while linenum < len(lines):
 #        xml.append('</document>')
         
 # Our extracted XML file if it's interesting for debugging
-#        with file(XMLTEMPLATE % pagenum, 'w') as of:
-#            of.write('\n'.join(xml))
+        with file(XMLTEMPLATE % pagenum, 'w') as of:
+            of.write('\n'.join(xml))
             
         dom = ET.fromstring('\n'.join(xml))
 
+        # Transform to hOCR
         newdom = transform(dom)
+
+        # post-process HTML
+
+        # strip headwords
+
+        # fix leading symbols t -> dagger & II -> ||
+
+        # apply semantic markup to entries
 
         print 'Writing page %d - %d XML lines processed' % (pagenum,linenum)
         with file(HTMLTEMPLATE % pagenum, 'w') as of:
