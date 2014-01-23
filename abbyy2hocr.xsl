@@ -32,7 +32,7 @@ Source: http://iphylo.blogspot.com/2011/07/correcting-ocr-using-hocr-firefox.htm
 </xsl:template>
 
 <xsl:template match="//page">
-  <div id="header"> header </div>
+  <div id="header"><a id="prev">Prev </a> header placeholder <a id="next"> Next</a> </div>
   <div class="ocr_page" id="container">
 		<xsl:attribute name="scan_res">
 			<xsl:value-of select="@resolution" />
@@ -50,7 +50,7 @@ Source: http://iphylo.blogspot.com/2011/07/correcting-ocr-using-hocr-firefox.htm
 	<xsl:apply-templates select="block" />
 
   </div>
-  <div id="footer">footer </div>
+  <div id="footer">footer placeholder</div>
 </xsl:template>
 
 <xsl:template match="block">

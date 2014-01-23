@@ -5,10 +5,11 @@ import requests
 from xml.etree import cElementTree
 import zlib
 
-PAGELIMIT=300
+PAGESTART=25
+PAGELIMIT=50
 SIZE=5*1024*1024
 XMLTEMPLATE = 'output/oed-vol1_p%d.xml'
-HTMLTEMPLATE = 'output/oed-vol1_p%d.html'
+HTMLTEMPLATE = 'output/oed-vol1_p%04d.html'
 HEADER = ['<?xml version="1.0" encoding="UTF-8"?>',
 #    '<document version="1.0" producer="LuraDocument XML Exporter for ABBYY FineReader" pagesCount="1"',
 #    'xmlns="http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml http://www.abbyy.com/FineReader_xml/FineReader6-schema-v1.xml">',
@@ -26,10 +27,9 @@ def mergeblocks(dom):
         '''
         blocks = dom.findall(".//div[@class='ocr_carea column']")
         print 'Found %d blocks' % len(blocks)
-        cols=[]
-        for i in range(3):
-                cols[i]=[]
+        cols=[[] for i in range(3)]
         pl = pt = pr = pb = 1500
+        lastcenter = -2000
         for block in blocks:
                 bbox = block.attrib['title'].split('bbox')[1]
                 l,t,r,b = map(int,bbox.strip().split(' '))
@@ -63,10 +63,17 @@ def mergeblocks(dom):
                         lastblock = block
         pw = pr - pl
         ph = pb - pt
-        print "Page: %d\t%d\t%d\t%d" % (pl,pt,pw,ph)
+        print "Page bounding box: %d\t%d\t%d\t%d" % (pl,pt,pw,ph)
         blocks = dom.findall(".//div[@class='ocr_carea column']")
         print 'Finally remaining %d blocks' % len(blocks)
-        
+
+def numberandlink(dom,pagenum):
+        nxt = dom.find(".//a[@id='next']")
+        prev = dom.find(".//a[@id='prev']")
+        nxt.attrib['href'] = HTMLTEMPLATE.split('/')[-1] % (pagenum+1)
+        prev.attrib['href'] = HTMLTEMPLATE.split('/')[-1] % (pagenum-1)
+        return dom
+
 def postprocess(dom):
         '''
         Post-process our HTML in an attempt to improve it
@@ -83,7 +90,7 @@ def postprocess(dom):
 
         # concatenate hyphenated words
 
-        # add next/previous page links
+        # number page and add next/previous page link
         return dom
 
 def download(remote,local):
@@ -115,6 +122,8 @@ def processfile(filename):
                 linenum += 1
                 if line.startswith('<page'):
                     pagenum += 1
+                    if pagenum < PAGESTART:
+                            continue
                     if pagenum > PAGELIMIT:
                         break
                     xml = list(HEADER)
@@ -135,7 +144,7 @@ def processfile(filename):
                     newdom = transform(dom)
 
                     newdom = postprocess(newdom)
-
+                    newdom = numberandlink(newdom, pagenum)
 
                     print 'Writing page %d - %d XML lines processed' % (pagenum,linenum)
                     with file(HTMLTEMPLATE % pagenum, 'w') as of:
