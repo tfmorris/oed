@@ -32,9 +32,8 @@ Source: http://iphylo.blogspot.com/2011/07/correcting-ocr-using-hocr-firefox.htm
 </xsl:template>
 
 <xsl:template match="//page">
-  <div id="header"></div>
-  <div id="container">
-    <div class="ocr_page">
+  <div id="header"> header </div>
+  <div class="ocr_page" id="container">
 		<xsl:attribute name="scan_res">
 			<xsl:value-of select="@resolution" />
 			<xsl:text> </xsl:text>
@@ -50,9 +49,8 @@ Source: http://iphylo.blogspot.com/2011/07/correcting-ocr-using-hocr-firefox.htm
 
 	<xsl:apply-templates select="block" />
 
-    </div>
   </div>
-  <div id="footer"></div>
+  <div id="footer">footer </div>
 </xsl:template>
 
 <xsl:template match="block">
@@ -158,16 +156,24 @@ Source: http://iphylo.blogspot.com/2011/07/correcting-ocr-using-hocr-firefox.htm
    </span>
 </xsl:template>
 
-<xsl:template match="charParams[@charConfidence &lt; 50 and @wordFromDictionary='false']">
+<xsl:template match="charParams[@charConfidence &lt; 45 and @wordFromDictionary='false']" priority="5">
   <span>
-     <xsl:attribute name="style">
-	<xsl:text>background-color:yellow</xsl:text>
+     <xsl:attribute name="class">
+	<xsl:text>very_low_confidence</xsl:text>
+     </xsl:attribute>
+	<xsl:value-of select="." /> 
+  </span>
+</xsl:template>
+<xsl:template match="charParams[@charConfidence &lt; 50 and @wordFromDictionary='false']" priority="4">
+  <span>
+     <xsl:attribute name="class">
+	<xsl:text>low_confidence</xsl:text>
      </xsl:attribute>
 	<xsl:value-of select="." /> 
   </span>
 </xsl:template>
 
-<xsl:template match="charParams">
+<xsl:template match="charParams" priority="3">
 	<xsl:value-of select="." /> 
 </xsl:template>
 
