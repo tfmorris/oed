@@ -1,6 +1,12 @@
 body {
   min-width: 900px;      /* 2x LC width + RC width */
 }
+span.low_confidence {
+  background-color: yellow;
+}
+span.very_low_confidence {
+  background-color: orange;
+}
 #container {
   padding-left: 300px;   /* LC width */
   padding-right: 300px;  /* RC width */
