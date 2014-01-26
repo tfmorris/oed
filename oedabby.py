@@ -1,3 +1,40 @@
+'''
+Parse ABBY FineReader XML and generate hOCR preview to help visualize contents.
+
+We currently merge text blocks which have been inappropriately split, but probably
+need to resegment the entire page from scratch because we also have some
+overlapping text blocks that can't be dealt with in a simple-minded fashion.  Paragraph
+boundaries are also wonky and should probably be ignored, working from lines instead.
+
+Page characteristics:
+- layouts for left and right pages are offset due to gutter
+- 3 column layout with vertical rules between columns
+- page header has first word, page number, last word at head of each of three columns
+  (ABBY recognizes the larger font, but with a size anywhere from 9.0-10.5)
+- no page footer, but signature marks at bottom of some pages
+  (e.g. "22-2" on pg. 171, "VOL. I." left and "23" right on pg 177)
+- entries can be split across columns/pages
+- entry format is described in detail on pp xix-xxiii with pronunciation key on pg. xxv and other
+  symbols & abbreviations on pg. xxvi
+- order: word main form (pronunciation) , subordinate words, part(s) of speech, [etymology],
+      definition(s) & quotations(s)
+  - main word form - bold, title case, larger font, possibly preceded by dagger ( = obsolete)
+    or double vertical bar ( = not naturalized)
+    (dagger often recognized as lower case 't', double vertical bar occasionally recognized as 'II' )
+    stress mark is "turned period" (ie uppper dot), usually recognized as apostrophe in word
+    (needs to be removed for searchable/natural form of word)
+  - pronunciation - diacritics & ligatures not being recognized. custom alphabet described pg xxv
+  - parts of speech - in italics, generally well recognized
+  - etymology - language code, followed by word in italics.  variable quality recognition, but
+    probably constrained enough syntax to be able to recover fair amount of info
+  - if there are multiple definitions, they are numbered with large bold arabic numbers
+    (font info not picked up by OCR, but probably can parse based on structure/layout since
+    numbers are at beginning of line, sequential starting at 1)
+  - each definition is follow by (optional) list of quotation.  Quotations are in a slightly smaller font.
+    Each quto is in a slightly smaller font and of the format: year in bold, author name in small caps,
+    title (abbrev.) in italics, quote
+  - small caps indicates a cross reference wherever it occurs - ideally should be hyperlinked
+'''
 import gzip
 import lxml.etree as ET
 import os
@@ -6,7 +43,7 @@ from xml.etree import cElementTree
 import zlib
 
 PAGESTART=25
-PAGELIMIT=50
+PAGELIMIT=500
 SIZE=5*1024*1024
 XMLTEMPLATE = 'output/oed-vol1_p%d.xml'
 HTMLTEMPLATE = 'output/oed-vol1_p%04d.html'
@@ -20,6 +57,83 @@ FILENAME = 'https://ia600401.us.archive.org/7/items/oed01arch/oed01arch_abbyy.gz
 xslt = ET.parse('abbyy2hocr.xsl')
 transform = ET.XSLT(xslt)
 
+class BoundingBox():
+        left = 0
+        top = 0
+        right = 0
+        bottom = 0
+        
+        def __init__(self, bbox):
+            self.left = bbox[0]
+            self.top = bbox[1]
+            self.right = bbox[2]
+            self.bottom = bbox[3]
+            
+        def inner(self, b2):
+                '''
+                Checks two bounding boxes to see if either completely contains
+                the other.  If a completely contained box is found, that inner box
+                is returned, otherwise None is returned.
+                '''
+                if self.contains(b2):
+                        return b2
+                if b2.contains(self):
+                        return self
+                return None
+
+        def contains(self,b2):
+                '''
+                Returns True if b2 is contained by b1
+                '''
+                # top, left, bottom, right - 0,0 in upper left
+                return b2.left >= left and b2.top >= top and b2.bottom <= bottom and b2.right <= b1.right
+                
+        def intersects(self,b2):
+                '''
+                Tests two bounding boxes to see if they intersect (or touch). Returns True
+                if they do and false if they don't.
+                '''
+                return not (self.left >= b2.right or b2.left >= self.right
+                            or self.top >= b2.bottom or b2.top >= self.bottom)
+
+        def width(self):
+                return self.right - self.left
+        def height(self):
+                return self.bottom - self.top
+        def centerx(self):
+                return self.left+self.width()/2
+
+        def union(self,b2):
+                return BoundingBox(min(self.left,b2.left), min(self.top,b2.top),
+                                       max(self.right,b2.right), max(self.bottom, b2.bottom) )
+
+        def maximize(self,b2):
+                '''
+                Maximize our bounding box with the other boxes bounds.
+                '''
+                self.left = min(self.left,b2.left)
+                self.top = min(self.top,b2.top)
+                self.right = max(self.right,b2.right)
+                self.bottom = max(self.bottom, b2.bottom)
+
+        def __str__(self):
+                return "bbox %d %d %d %d" % (self.left, self.top, self.right, self.bottom)
+        
+def bound_box(block):
+        bbox = block.attrib['title'].split('bbox')[1]
+        return map(int,bbox.strip().split(' '))
+
+
+def extendblock(block1, block2):
+        '''
+        Merge contents of block2 into block1
+        '''
+        print("merging")
+        block1.extend(block2.findall("*"))
+        # TODO: update bounding box in title attribution of block1
+        block2.find("..").remove(block2)
+        block2.clear
+        
 def mergeblocks(dom):
         '''
         Sort text blocks by column and merge those where the columns
@@ -28,44 +142,41 @@ def mergeblocks(dom):
         blocks = dom.findall(".//div[@class='ocr_carea column']")
         print 'Found %d blocks' % len(blocks)
         cols=[[] for i in range(3)]
-        pl = pt = pr = pb = 1500
+        page_bb = BoundingBox([1500,1500,1500,1500]) # Starting page bounding box - center point of page
         lastcenter = -2000
-        for block in blocks:
-                bbox = block.attrib['title'].split('bbox')[1]
-                l,t,r,b = map(int,bbox.strip().split(' '))
-                if l < pl:
-                        pl = l
-                if t < pt:
-                        pt = t
-                if r > pr:
-                        pr = r
-                if b > pb:
-                        pb = b
+        for i in range(len(blocks)):
+                block = blocks[i]
+                bbox = BoundingBox(bound_box(block))
+                page_bb.maximize(bbox)
+
                 # Nominal column width is ~720-750 pixels
-                w = r-l
+                w = bbox.width()
                 # Full column height is ~3045-3115 pixels
-                h = b-t
+                h = bbox.height()
+                
+                # TODO: take runts out of flow (position absolutely?)
+                
                 # Nominal column centers 415, 1170, 1920 or 725, 1480, 2230
                 # (ie 300 px offset on facing pages)
-                c = l+(w)/2
-                print "%d\t%d\t%d\t%d\t%d\t%d\t%d" % (l,r,t,b,c,w,h)
-                # Sort by column & then by Y position before merging
+                c = bbox.centerx()
+                print "%s\t%d\t%d\t%d" % (bbox,c,w,h)
+
+                # TODO: Sort by column & then by Y position before merging?
                 # ** need to watch for overlapping bboxes ie bad segmentation**
+                
                 # make sure candidates to be merged are the same shape & adjacent
                 if (abs(lastcenter - c) < 100):
-                        print("merging")
-                        lastblock.extend(block.findall("*"))
-                        # TODO: update bounding box?
-                        block.find("..").remove(block)
-                        block.clear
+                       extendblock(lastblock,block)
                 else:
                         lastcenter = c
                         lastblock = block
-        pw = pr - pl
-        ph = pb - pt
-        print "Page bounding box: %d\t%d\t%d\t%d" % (pl,pt,pw,ph)
+        pw = page_bb.width()
+        ph = page_bb.height()
+        print "Page: %s %d\t%d" % (page_bb,pw,ph)
         blocks = dom.findall(".//div[@class='ocr_carea column']")
         print 'Finally remaining %d blocks' % len(blocks)
+        if len(blocks) > 3:
+                print '*** too many blocks on this page'
 
 def numberandlink(dom,pagenum):
         nxt = dom.find(".//a[@id='next']")
