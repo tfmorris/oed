@@ -9,7 +9,7 @@ boundaries are also wonky and should probably be ignored, working from lines ins
 Page characteristics:
 - layouts for left and right pages are offset due to gutter
 - 3 column layout with vertical rules between columns
-- page header has first word, page number, last word at head of each of three columns
+- page header has first word, page number, last word centered at head of each of three columns
   (ABBY recognizes the larger font, but with a size anywhere from 9.0-10.5)
 - no page footer, but signature marks at bottom of some pages
   (e.g. "22-2" on pg. 171, "VOL. I." left and "23" right on pg 177)
@@ -20,7 +20,7 @@ Page characteristics:
       definition(s) & quotations(s)
   - main word form - bold, title case, larger font, possibly preceded by dagger ( = obsolete)
     or double vertical bar ( = not naturalized)
-    (dagger often recognized as lower case 't', double vertical bar occasionally recognized as 'II' )
+    (dagger often recognized as lower case 't', double vertical bar occasionally recognized as 'II' 'I!')
     stress mark is "turned period" (ie uppper dot), usually recognized as apostrophe in word
     (needs to be removed for searchable/natural form of word)
   - pronunciation - diacritics & ligatures not being recognized. custom alphabet described pg xxv
@@ -39,6 +39,7 @@ import gzip
 import lxml.etree as ET
 import os
 import requests
+import shutil
 from xml.etree import cElementTree
 import zlib
 
@@ -118,6 +119,9 @@ class BoundingBox():
 
         def __str__(self):
                 return "bbox %d %d %d %d" % (self.left, self.top, self.right, self.bottom)
+
+        def __repr__(self):
+                return "%s %d %d" % (str(self), self.width(), self.height())
         
 def bound_box(block):
         bbox = block.attrib['title'].split('bbox')[1]
@@ -128,9 +132,13 @@ def extendblock(block1, block2):
         '''
         Merge contents of block2 into block1
         '''
-        print("merging")
+        bb1 = BoundingBox(bound_box(block1))
+        bb2 = BoundingBox(bound_box(block2))
+        #print("merging two blocks: %s, %s" % (bb1,bb2))
         block1.extend(block2.findall("*"))
-        # TODO: update bounding box in title attribution of block1
+        bb1.maximize(bb2)
+        block1.attrib['title']=str(bb1)
+        #print("resulting block: %s" % bb1)
         block2.find("..").remove(block2)
         block2.clear
         
@@ -139,14 +147,16 @@ def mergeblocks(dom):
         Sort text blocks by column and merge those where the columns
         were split up into multiple blocks.  
         '''
-        blocks = dom.findall(".//div[@class='ocr_carea column']")
-        print 'Found %d blocks' % len(blocks)
         cols=[[] for i in range(3)]
         page_bb = BoundingBox([1500,1500,1500,1500]) # Starting page bounding box - center point of page
         lastcenter = -2000
+        blocks = dom.findall(".//div[@class='ocr_carea column']")
+        #print 'Found %d blocks' % len(blocks)
+        bboxes = []
         for i in range(len(blocks)):
                 block = blocks[i]
                 bbox = BoundingBox(bound_box(block))
+                bboxes.append(bbox)
                 page_bb.maximize(bbox)
 
                 # Nominal column width is ~720-750 pixels
@@ -159,7 +169,7 @@ def mergeblocks(dom):
                 # Nominal column centers 415, 1170, 1920 or 725, 1480, 2230
                 # (ie 300 px offset on facing pages)
                 c = bbox.centerx()
-                print "%s\t%d\t%d\t%d" % (bbox,c,w,h)
+                #print "%s\t%d\t%d\t%d" % (bbox,c,w,h)
 
                 # TODO: Sort by column & then by Y position before merging?
                 # ** need to watch for overlapping bboxes ie bad segmentation**
@@ -172,11 +182,13 @@ def mergeblocks(dom):
                         lastblock = block
         pw = page_bb.width()
         ph = page_bb.height()
-        print "Page: %s %d\t%d" % (page_bb,pw,ph)
+        print "Page: %s" % (repr(page_bb))
         blocks = dom.findall(".//div[@class='ocr_carea column']")
-        print 'Finally remaining %d blocks' % len(blocks)
+        #print 'Finally remaining %d blocks' % len(blocks)
         if len(blocks) > 3:
-                print '*** too many blocks on this page'
+                print '  * too many blocks on this page: %d' % len(blocks)
+                for bbox in bboxes:
+                        print bbox
 
 def numberandlink(dom,pagenum):
         nxt = dom.find(".//a[@id='next']")
@@ -219,6 +231,8 @@ def processfile(filename):
     if not os.path.exists(localfile):
         download(filename,localfile)
 
+    shutil.copyfile('3column.css','output/3column.css')
+    
     # Old code to just read a few MB over the network & decompress it
     #    r = requests.get(f, stream=True)
     #    buf = r.raw.read(SIZE)
@@ -246,8 +260,8 @@ def processfile(filename):
             #        xml.append('</document>')
                     
             # Our extracted XML file if it's interesting for debugging
-            #        with file(XMLTEMPLATE % pagenum, 'w') as of:
-            #            of.write('\n'.join(xml))
+                    with file(XMLTEMPLATE % pagenum, 'w') as of:
+                        of.write('\n'.join(xml))
 
                     dom = ET.fromstring('\n'.join(xml))
 
