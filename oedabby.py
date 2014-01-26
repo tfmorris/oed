@@ -260,8 +260,8 @@ def processfile(filename):
             #        xml.append('</document>')
                     
             # Our extracted XML file if it's interesting for debugging
-                    with file(XMLTEMPLATE % pagenum, 'w') as of:
-                        of.write('\n'.join(xml))
+            #        with file(XMLTEMPLATE % pagenum, 'w') as of:
+            #            of.write('\n'.join(xml))
 
                     dom = ET.fromstring('\n'.join(xml))
 
