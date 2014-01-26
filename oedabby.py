@@ -35,15 +35,17 @@ Page characteristics:
     title (abbrev.) in italics, quote
   - small caps indicates a cross reference wherever it occurs - ideally should be hyperlinked
 '''
+from collections import Counter
 import gzip
 import lxml.etree as ET
+from operator import itemgetter
 import os
 import requests
 import shutil
 from xml.etree import cElementTree
 import zlib
 
-PAGESTART=25
+PAGESTART=26
 PAGELIMIT=500
 SIZE=5*1024*1024
 XMLTEMPLATE = 'output/oed-vol1_p%d.xml'
@@ -54,9 +56,6 @@ HEADER = ['<?xml version="1.0" encoding="UTF-8"?>',
     ]
 FILENAME = 'https://ia600401.us.archive.org/7/items/oed01arch/oed01arch_abbyy.gz'
 
-
-xslt = ET.parse('abbyy2hocr.xsl')
-transform = ET.XSLT(xslt)
 
 class BoundingBox():
         left = 0
@@ -197,10 +196,60 @@ def numberandlink(dom,pagenum):
         prev.attrib['href'] = HTMLTEMPLATE.split('/')[-1] % (pagenum-1)
         return dom
 
+def findcolumns(dom):
+        lines = dom.findall(".//span[@class='ocr_line']")
+        leftcounter = Counter()
+        for line in lines:
+                left = int(line.attrib['title'].strip().split(' ')[1])
+                leftcounter[left] +=1
+        last = None
+        # Find right column's left edge
+        for k,v in sorted(leftcounter.items(), key=itemgetter(0), reverse=True):
+                if last and last-k > 200:
+                        col3 = last
+                        break
+                if k < 2000:
+                        last = k
+        # Left column is easy
+        col1 = int(sorted(leftcounter.items(), key=itemgetter(0))[0][0])
+        last = None
+        # Middle column 
+        for k,v in sorted(leftcounter.items(), key=itemgetter(0)):
+                if last and k-last > 300:
+                        col2 = k
+                        break
+                last = k
+        print "Columns: ", col1, col2, col3
+        for k,v in leftcounter.most_common(20):
+               print k,v
+        columnlines = [[],[],[]]
+        for line in lines:
+                left = int(line.attrib['title'].strip().split(' ')[1])
+                if left >= col3:
+                        columnlines[2].append(line)
+                elif left <= col2:
+                        columnlines[0].append(line)
+                else:
+                        columnlines[1].append(line)
+        totallines = len(lines)
+        print totallines
+        for i in range(3):
+            print len(columnlines[i])
+            if len(columnlines[i]) * 1.0 / totallines < 0.25:
+                    print '*** short column'
+                    print xyzzy
+            columnlines[i].sort(key=lambda line:  int(line.attrib['title'].strip().split(' ')[2]))
+        print("%s\t%s\t%s" % tuple([unicode(columnlines[i][0].xpath("string()")) for i in range(3)]))
+        print("%s\t%s\t%s" % tuple([unicode(columnlines[i][-1].xpath("string()")) for i in range(3)]))
+
+        return col1, col2, col3
+
 def postprocess(dom):
         '''
         Post-process our HTML in an attempt to improve it
         '''
+        columns = findcolumns(dom)
+        print "Columns: ", columns
         mergeblocks(dom)
 
         # merge multiple blocks in a column
@@ -230,6 +279,9 @@ def processfile(filename):
     localfile = 'input/'+filename.split('/')[-1]
     if not os.path.exists(localfile):
         download(filename,localfile)
+
+    xslt = ET.parse('abbyy2hocr.xsl')
+    transform = ET.XSLT(xslt)
 
     shutil.copyfile('3column.css','output/3column.css')
     
