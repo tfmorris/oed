@@ -1,0 +1,68 @@
+
+Pages with bad segmentation
+
+26 - multiple small text blocks in column 1
+27 - runt in col 1 overlapping main block
+*43 pg 19 - lots of blocks in col 1
+pg 20 - runt in col 1
+*pg 22 - split blocks side by side in col 1 (caused by Persian in the middle?)
+pg 24 - runts in bottom and right margin
+pg 25 - runt in col 3
+pg 34 - runt in col 1
+pg 35 - 11 text blocks! inc runt in bottom margin and lots of mess at bottom of col 2
+pg 36 - split in col 3 caused by short word isolated on line
+pg 38 - runt in col 1
+pg 41 - runt in bottom margin
+pg 43 - gap in col 2?
+pg 44 - runt in col 3
+*pg 46 - 9 text blocks including side-by-side split in col 1 ** split line needs splicing **
+pg 48 - runt in col 2
+pg 50 - overlaps in col 2
+pg 54 - runt in col 1
+pg 60 - runt in col 1
+*pg 62 - 11 text blocks, runt in col 1
+pg 68 - runt in bottom margin (noise)
+pg 81 - gaps at bottom of col 3
+pg 85 - overlapping blocks in col 1
+pg 90 - runt in bottom right margin
+pg 93 - runt in col 3
+pg 97 - split in col 1
+pg 102 - runt in col 1
+*pg 105 - multiple overlapping blocks in col 2
+153 - pg 129
+pg 141 - multiple overlapping blocks in col 2
+pg 148 - runt in bottom right margin 
+pg 151 - overlapping blocks in col 3
+pg 153 - runt in col 1
+pg 161 - col 3 has six poorly segmented blocks
+pg 165 - split line at bottom of col 2
+pg 169 - multiple runts and overlapping blocks in cols 1 & 3 - 15 blocks total!
+pg 171 - runt in col 3
+pg 172 - runt/noise in right margin
+pg 189 - split line in col 3, overlapping blocks
+pg 202 - overlapping blocks in col 2
+pg 206 - split line col 1, overlapping blocks col 3
+pg 214 - multiline overlap in col 1
+pg 218 - split line bottom of col 1
+pg 219 - overlap col 2
+pg 221 - overlap col 2
+pg 225 - three side by side split in col 1 (mid page vertically)
+pg 228 - overlap col 1
+pg 231 - multiple overlaps col 1 - 12 blocks total
+pg 232 - overlap col 2
+pg 235 - multiple overlaps col 1
+pg 244 - split side-by-side in col 3
+pg 245 - overlap col 2
+pg 249 - overlaps and skips at bottom of col 3
+pg 261 - overlap col 3
+pg 274 - split bottom of col 2
+pg 278 - overlap col 1
+pg 279 - runt col 1
+pg 287 - runt col 3
+pg 289 - overlaps col 1
+pg 290 - runt col 3
+pg 298 - runt bottom margin
+pg 299 - overlaps col 2
+*324 pg 300 - split bottom col 3 - need to not only merge blocks, but paras & lines as well.
+pg 382 - two column text block in middle of page overlapping another text block
+pg 492 - 58 text blocks ! complete patchwork with almost no recognized characters (skewed scan)
