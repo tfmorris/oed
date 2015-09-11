@@ -9,7 +9,7 @@ Source: http://iphylo.blogspot.com/2011/07/correcting-ocr-using-hocr-firefox.htm
 
 <xsl:variable name="scale" select="800 div //page/@width" />
 
-<!-- Compute column boundaries - way may need something fancier -->
+<!-- Compute column boundaries - we may need something fancier -->
 <xsl:variable name="left" select="//page/@width div 4" />
 <xsl:variable name="right" select="//page/@width * 55 div 100" />
 
@@ -22,7 +22,7 @@ Source: http://iphylo.blogspot.com/2011/07/correcting-ocr-using-hocr-firefox.htm
 <meta name="ocr-scripts" content="Latn"/>
 <meta name="ocr-microformats" content=""/>
 <link rel="stylesheet" type="text/css" href="3column.css" />
-<title>OCR Output</title>
+<title>A New English Dictionary (1888) - OCR output</title>
 </head>
 <body>
 
@@ -32,7 +32,7 @@ Source: http://iphylo.blogspot.com/2011/07/correcting-ocr-using-hocr-firefox.htm
 </xsl:template>
 
 <xsl:template match="//page">
-  <div id="header"><a id="prev">Prev </a> header placeholder <a id="next"> Next</a> </div>
+  <div id="header"><span><a id="prev">Previous Page </a></span><b>     A New English Dictionary (1888)  </b> <a id="orig" target="_blank">Source Image</a>   <a id="next"> Next Page</a> </div>
   <div class="ocr_page" id="container">
 		<xsl:attribute name="scan_res">
 			<xsl:value-of select="@resolution" />
@@ -54,7 +54,7 @@ Source: http://iphylo.blogspot.com/2011/07/correcting-ocr-using-hocr-firefox.htm
 </xsl:template>
 
 <xsl:template match="block">
-  <div class="ocr_carea column">
+  <div>
 		<xsl:attribute name="title">
 			<xsl:text>blockType: </xsl:text>
 			<xsl:value-of select="@blockType" />
@@ -67,16 +67,16 @@ Source: http://iphylo.blogspot.com/2011/07/correcting-ocr-using-hocr-firefox.htm
 			<xsl:text> </xsl:text>
 			<xsl:value-of select="@b" />
 		</xsl:attribute>
-		<xsl:attribute name="id">
+		<xsl:attribute name="class">
 		  <xsl:choose>
 		    <xsl:when test="@l &lt; $left">
-		      <xsl:text>left</xsl:text>
+		      <xsl:text>ocr_carea column col_left</xsl:text>
 		    </xsl:when>
 		    <xsl:when test="@l &gt; $right">
-		      <xsl:text>right</xsl:text>
+		      <xsl:text>ocr_carea column col_right</xsl:text>
 		    </xsl:when>
 		    <xsl:otherwise>
-		      <xsl:text>center</xsl:text>
+		      <xsl:text>ocr_carea column col_center</xsl:text>
 		    </xsl:otherwise>
 		  </xsl:choose>
 		</xsl:attribute>
